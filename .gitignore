@@ -91,3 +91,7 @@
 /Test_images/
 /.idea/
 /env/
+/Data_Handler/patients_data_updated.csv
+/Data_Handler/Train_U_zeros_LSR_005_03.csv
+/Data_Handler/Train_U_zeros_LSR_0_03.csv
+/Data_Handler/Train_U_ones_LSR_055_085.csv
