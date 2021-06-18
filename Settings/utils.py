@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import roc_auc_score, roc_curve
 
-def get_roc_curve(labels, predicted_vals, generator, roc_5 = True):
+def get_roc_curve(labels, predicted_vals, generator,name, roc_5 = True):
     auc_roc_vals = []
     y = np.concatenate([y for x, y in generator], axis=0)
     if roc_5:
@@ -30,6 +30,7 @@ def get_roc_curve(labels, predicted_vals, generator, roc_5 = True):
             plt.legend(loc='best')
         except:
             print(f"Error: {labels[i]}. ")
+    plt.savefig(name)
     plt.show()
     return auc_roc_vals
 

@@ -26,7 +26,7 @@ def generate_uniform_dist_labels(a, b, number_of_labels = 139958):
     plt.savefig("uniform")
     return uniform_dist
 
-def get_number_of_labels(data_frame):
+def create_U_zeros_U_ones(data_frame):
     df = pd.read_csv(data_frame)
 
     U_zeros = df.copy()
