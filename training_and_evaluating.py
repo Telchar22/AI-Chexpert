@@ -279,3 +279,22 @@ def eval(model_weights, image_val_tta, image_val, image_all):
     evals = model.evaluate(valid_set, verbose=1)
     print(evals)
 
+data_sets = 'Train_U_zeros_LSR_0_03.csv'
+model_checkpoint = r'Data/Weights/U_zeros_LSR_0_03/checkpoints/weights.{epoch:02d}-{loss:.3f}.ckpt'
+model_weights = r'Data/Weights/U_zeros_LSR_0_03/model/weights/attempt1.ckpt'
+init_training(data_sets, model_checkpoint, model_weights)
+
+image_val_tta = r'Data/Weights/U_zeros_LSR_0_03/image_val_tta.png'
+image_val = r'Data/Weights/U_zeros_LSR_0_03/image_val.png'
+image_all = r'Data/Weights/U_zeros_LSR_0_03/image_all.png'
+eval(model_weights, image_val_tta, image_val, image_all)
+
+model_checkpoint = r'Data/Weights/U_zeros_LSR_0_03/checkpoint_tune/weights.{epoch:02d}-{loss:.3f}.ckpt'
+path = r'Data/Weights/U_zeros_LSR_0_03/model/weights/attempt1.ckpt'
+model_weights =  r'Data/Weights/U_zeros_LSR_0_03/model/weights_after_tune/attempt1.ckpt'
+init_training(data_sets, model_checkpoint, model_weights, path = path, tune = True )
+
+image_val_tta = r'Data/Weights/U_zeros_LSR_0_03/tune_image_val_tta.png'
+image_val = r'Data/Weights/U_zeros_LSR_0_03/tune_image_val.png'
+image_all = r'Data/Weights/U_zeros_LSR_0_03/tune_image_all.png'
+eval(model_weights, image_val_tta, image_val, image_all)
