@@ -8,7 +8,7 @@ from Settings import settings as S
 import math
 from Settings import utils as U
 
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 IMG_SIZE = 224
 BUFFER_SIZE = 2048
 IMG_SHAPE = (IMG_SIZE, IMG_SIZE, 3)
@@ -205,7 +205,7 @@ def get_compiled_model(tune_at, path, metrics=METRICS, use_base_weights=True, fi
     return model
 
 
-def init_training(data_sets, model_checkpoint, model_weights):
+def init_training(data_sets, model_checkpoint, model_weights, path = None, tune = False):
     '''
     Initialize training process and tensorboard.
     :param data_sets: csv file with paths and labels.
@@ -215,8 +215,11 @@ def init_training(data_sets, model_checkpoint, model_weights):
     '''
     train_set, valid_set = prepare_training_data_sets(data_sets)
     print("Done prep...\n")
-    # model = get_compiled_model()
-    model = get_compiled_model()
+
+    if tune is False:
+        model = get_compiled_model()
+    else:
+        model = get_compiled_model(80, path, metrics=METRICS, use_base_weights=False, fine_tune=True)
     print('Training...\n')
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
     early_stopping = tf.keras.callbacks.EarlyStopping(
@@ -226,7 +229,7 @@ def init_training(data_sets, model_checkpoint, model_weights):
         patience=4,
         mode='min',
         restore_best_weights=True)
-    checkpoint_filepath = 'Data/Weights/U_zeros_v1/tune/weights.{epoch:02d}-{loss:.3f}.ckpt'
+    checkpoint_filepath = model_checkpoint
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_filepath,
         monitor='loss',
@@ -242,13 +245,13 @@ def init_training(data_sets, model_checkpoint, model_weights):
                         shuffle=True,
                         )
 
-    model.save_weights(r'Data/Weights/U_zeros_v1/model/aftertune/attempt1.ckpt', save_format="tf")
+    model.save_weights(model_weights, save_format="tf")
     print('Done :)\n')
 
 
-def eval():
+def eval(model_weights, image_val_tta, image_val, image_all):
     model = get_compiled_model(use_base_weights=False)
-    latest = 'Data/Weights/U_zeros_v1/model/aftertune/attempt1.ckpt'
+    latest = model_weights
 
     model.load_weights(latest)
     val_tta = prepare_TTA_valid_eval()
@@ -257,25 +260,22 @@ def eval():
     predictions = model.predict(val_tta, verbose=1)
     evals = model.evaluate(val_tta, verbose=1)
     print(evals, '\n')
-    roc = U.get_roc_curve2(['Cardiomegaly', 'Edema', 'Consolidation', 'Atelectasis', 'Pleural Effusion'], predictions,
-                           val_tta)
+    roc = U.get_roc_curve(['Cardiomegaly', 'Edema', 'Consolidation', 'Atelectasis', 'Pleural Effusion'], predictions,
+                           val_tta, image_val_tta)
     print(roc)
     print("5 res:", sum(roc) / 5)
     print('\n')
 
     print("Results: \n")
     predictions1 = model.predict(valid_set, verbose=1)
-    a = U.get_roc_curve2(['Cardiomegaly', 'Edema', 'Consolidation', 'Atelectasis', 'Pleural Effusion'], predictions1,
-                         valid_set)
+    a = U.get_roc_curve(['Cardiomegaly', 'Edema', 'Consolidation', 'Atelectasis', 'Pleural Effusion'], predictions1,
+                         valid_set, image_val)
     print(a)
     print("5 res:", sum(a) / 5)
 
-    d = U.get_roc_curve(S.CLASSES, predictions1, valid_set, roc_5 = False)
+    d = U.get_roc_curve(S.CLASSES, predictions1, valid_set,image_all, roc_5 = False)
     print(d)
 
     evals = model.evaluate(valid_set, verbose=1)
     print(evals)
 
-
-init_training()
-eval()
