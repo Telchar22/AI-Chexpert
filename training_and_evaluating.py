@@ -205,13 +205,15 @@ def get_compiled_model(tune_at, path, metrics=METRICS, use_base_weights=True, fi
     return model
 
 
-def init_training():
+def init_training(data_sets, model_checkpoint, model_weights):
     '''
-    Initialize training process and plot metrics.
+    Initialize training process and tensorboard.
+    :param data_sets: csv file with paths and labels.
+    :param model_checkpoint: path to directory, where checkpoints are stored.
+    :param model_weights: path to directory, where best weights are stored.
     :return:
     '''
-
-    train_set, valid_set = prepare_training_data_sets('Train_U_Zeros.csv')
+    train_set, valid_set = prepare_training_data_sets(data_sets)
     print("Done prep...\n")
     # model = get_compiled_model()
     model = get_compiled_model()
