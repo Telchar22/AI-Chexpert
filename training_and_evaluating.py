@@ -68,6 +68,7 @@ def create_dataset(files, labels):
 
 
 def prepare_TTA_valid_eval():
+    # Just for additional verification
     def flip(x, label):
         image = tf.image.random_flip_up_down(x)
         return image, label
@@ -208,7 +209,7 @@ def init_training(data_sets, model_checkpoint, model_weights, path = None, tune 
     :param data_sets: csv file with paths and labels.
     :param model_checkpoint: path to directory, where checkpoints are stored.
     :param model_weights: path to directory, where best weights are stored.
-    :return:
+    :param path: if fine tunning, path to latest weights
     '''
     train_set, valid_set = prepare_training_data_sets(data_sets)
     print("Done prep...\n")
@@ -218,7 +219,7 @@ def init_training(data_sets, model_checkpoint, model_weights, path = None, tune 
         ep = 10
         pat = 4
     else:
-        model = get_compiled_model(100, metrics=METRICS, use_base_weights=False, fine_tune=True)
+        model = get_compiled_model(layers_to_freeze, metrics=METRICS, use_base_weights=False, fine_tune=True)
         latest = path
         model.load_weights(latest)
         ep = 3
@@ -253,6 +254,7 @@ def init_training(data_sets, model_checkpoint, model_weights, path = None, tune 
 
 
 def eval(model_weights, image_val_tta, image_val, image_all,tune = False):
+    # TTA is for additional verification of validation results
     if tune is False:
         model = get_compiled_model()
     else:
