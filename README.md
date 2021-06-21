@@ -6,5 +6,7 @@ reduces the number of captions and aligns the images.
 The main research area of this project focuses on the analysis of available data and its exploitation (various LSR techniques, exploitation of correlations, 
 conditional learning). It is not currently planned to share the rest of the results and tools. 
 
+<img src="uSummary_LSR.png" alt="drawing" width="400"/>
+
 <img src="u_zeros.png" alt="drawing" width="350"/>
 
