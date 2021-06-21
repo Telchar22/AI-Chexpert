@@ -149,7 +149,7 @@ def prepare_training_data_sets(a):
     return train_set, valid_set
 
 
-def get_compiled_model(tune_at, path, metrics=METRICS, use_base_weights=True, fine_tune=False):
+def get_compiled_model(tune_at=None, metrics=METRICS, use_base_weights=True, fine_tune=False):
     '''
     Build architecture based on pretrained DenseNet
     :return: compiled model
@@ -198,9 +198,6 @@ def get_compiled_model(tune_at, path, metrics=METRICS, use_base_weights=True, fi
                   metrics=[metrics])
     # model.summary()
 
-    if fine_tune:
-        latest = path  # 'Data/Weights/U_zeros_v1/model/tune/attempt1.ckpt'
-        model.load_weights(latest)
 
     return model
 
@@ -218,15 +215,21 @@ def init_training(data_sets, model_checkpoint, model_weights, path = None, tune 
 
     if tune is False:
         model = get_compiled_model()
+        ep = 10
+        pat = 4
     else:
-        model = get_compiled_model(80, path, metrics=METRICS, use_base_weights=False, fine_tune=True)
+        model = get_compiled_model(100, metrics=METRICS, use_base_weights=False, fine_tune=True)
+        latest = path
+        model.load_weights(latest)
+        ep = 3
+        pat = 3
     print('Training...\n')
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
     early_stopping = tf.keras.callbacks.EarlyStopping(
         monitor="val_loss",  # 'val_auc'
         verbose=1,
         min_delta=0.001,
-        patience=4,
+        patience=pat,
         mode='min',
         restore_best_weights=True)
     checkpoint_filepath = model_checkpoint
@@ -239,7 +242,7 @@ def init_training(data_sets, model_checkpoint, model_weights, path = None, tune 
         save_best_only=False)
 
     history = model.fit(train_set,
-                        epochs=12,
+                        epochs=ep,
                         validation_data=valid_set,
                         callbacks=[early_stopping, tensorboard_callback, model_checkpoint_callback],
                         shuffle=True,
@@ -249,45 +252,52 @@ def init_training(data_sets, model_checkpoint, model_weights, path = None, tune 
     print('Done :)\n')
 
 
-def eval(model_weights, image_val_tta, image_val, image_all):
-    model = get_compiled_model(use_base_weights=False)
+def eval(model_weights, image_val_tta, image_val, image_all,tune = False):
+    if tune is False:
+        model = get_compiled_model()
+    else:
+        model = get_compiled_model(100, metrics=METRICS, use_base_weights=False, fine_tune=True)
     latest = model_weights
 
     model.load_weights(latest)
     val_tta = prepare_TTA_valid_eval()
     valid_set = validate_sub_score()
-
+    print('Vall_TTA evaluation \n')
     predictions = model.predict(val_tta, verbose=1)
     evals = model.evaluate(val_tta, verbose=1)
     print(evals, '\n')
     roc = U.get_roc_curve(['Cardiomegaly', 'Edema', 'Consolidation', 'Atelectasis', 'Pleural Effusion'], predictions,
                            val_tta, image_val_tta)
-    print(roc)
-    print("5 res:", sum(roc) / 5)
-    print('\n')
-
-    print("Results: \n")
+    print(f'Val_TTA: Cardiomegaly: {roc[0]}, Edema: {roc[1]}, Consolidation: {roc[2]}, Atelectasis: {roc[3]}, Pleural Effusion: {roc[4]} \n')
+    print(f"5 res for TTA: {sum(roc) / 5} \n")
+    print('Eval without TTA: \n')
     predictions1 = model.predict(valid_set, verbose=1)
-    a = U.get_roc_curve(['Cardiomegaly', 'Edema', 'Consolidation', 'Atelectasis', 'Pleural Effusion'], predictions1,
+    roc2 = U.get_roc_curve(['Cardiomegaly', 'Edema', 'Consolidation', 'Atelectasis', 'Pleural Effusion'], predictions1,
                          valid_set, image_val)
-    print(a)
-    print("5 res:", sum(a) / 5)
+    print(f'Eval without TTA: Cardiomegaly: {roc2[0]}, Edema: {roc2[1]}, Consolidation: {roc2[2]}, Atelectasis: {roc2[3]}, Pleural Effusion: {roc2[4]} \n')
+    print(f"5 res: {sum(roc2) / 5}\n")
 
-    d = U.get_roc_curve(S.CLASSES, predictions1, valid_set,image_all, roc_5 = False)
-    print(d)
+    roc3 = U.get_roc_curve(S.CLASSES, predictions1, valid_set,image_all, roc_5 = False)
+    classes = ['No Finding', 'Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity', 'Lung Lesion', 'Edema',
+           'Consolidation', 'Pneumonia', 'Atelectasis', 'Pneumothorax', 'Pleural Effusion', 'Pleural Other',
+           'Fracture']
+    for i, j in enumerate(classes):
+        print(f'{j} = {roc3[i]} \n')
 
     evals = model.evaluate(valid_set, verbose=1)
     print(evals)
 
-data_sets = 'Train_U_zeros_LSR_0_03.csv'
+'''data_sets = 'Train_U_zeros_LSR_0_03.csv'
 model_checkpoint = r'Data/Weights/U_zeros_LSR_0_03/checkpoints/weights.{epoch:02d}-{loss:.3f}.ckpt'
 model_weights = r'Data/Weights/U_zeros_LSR_0_03/model/weights/attempt1.ckpt'
-init_training(data_sets, model_checkpoint, model_weights)
+#init_training(data_sets, model_checkpoint, model_weights)
 
 image_val_tta = r'Data/Weights/U_zeros_LSR_0_03/image_val_tta.png'
 image_val = r'Data/Weights/U_zeros_LSR_0_03/image_val.png'
 image_all = r'Data/Weights/U_zeros_LSR_0_03/image_all.png'
-eval(model_weights, image_val_tta, image_val, image_all)
+
+
+#eval(model_weights, image_val_tta, image_val, image_all)
 
 model_checkpoint = r'Data/Weights/U_zeros_LSR_0_03/checkpoint_tune/weights.{epoch:02d}-{loss:.3f}.ckpt'
 path = r'Data/Weights/U_zeros_LSR_0_03/model/weights/attempt1.ckpt'
@@ -297,4 +307,85 @@ init_training(data_sets, model_checkpoint, model_weights, path = path, tune = Tr
 image_val_tta = r'Data/Weights/U_zeros_LSR_0_03/tune_image_val_tta.png'
 image_val = r'Data/Weights/U_zeros_LSR_0_03/tune_image_val.png'
 image_all = r'Data/Weights/U_zeros_LSR_0_03/tune_image_all.png'
-eval(model_weights, image_val_tta, image_val, image_all)
+eval(model_weights, image_val_tta, image_val, image_all, tune = True)'''
+
+'''data_sets = 'Train_U_zeros_LSR_0_03.csv'
+model_checkpoint = r'Data/Weights/U_zeros_LSR_0_03_tune_at_280/checkpoint_tune/weights.{epoch:02d}-{val_loss:.3f}.ckpt'
+path = r'Data/Weights/U_zeros_LSR_0_03_tune_at_280/model/weights/attempt1.ckpt'
+model_weights =  r'Data/Weights/U_zeros_LSR_0_03_tune_at_280/model/weights_after_tune/weights.01-0.375.ckpt'
+init_training(data_sets, model_checkpoint, model_weights, path = path, tune = True )
+
+image_val_tta = r'Data/Weights/U_zeros_LSR_0_03_tune_at_280/tune_image_val_tta.png'
+image_val = r'Data/Weights/U_zeros_LSR_0_03_tune_at_280/tune_image_val.png'
+image_all = r'Data/Weights/U_zeros_LSR_0_03_tune_at_280/tune_image_all.png'
+eval(model_weights, image_val_tta, image_val, image_all, tune = True)'''
+
+data_sets = 'Train_U_Zeros.csv'
+
+model_checkpoint = r'Data/Weights/U_zeros_base_tune_at_100/checkpoints/weights.{epoch:02d}-{loss:.3f}.ckpt'
+model_weights = r'Data/Weights/U_zeros_base_tune_at_100/model/weights/attempt1.ckpt'
+init_training(data_sets, model_checkpoint, model_weights)
+
+model_checkpoint = r'Data/Weights/U_zeros_base_tune_at_100/checkpoint_tune/weights.{epoch:02d}-{val_loss:.3f}.ckpt'
+path = r'Data/Weights/U_zeros_base_tune_at_100/model/weights/attempt1.ckpt'
+model_weights =  r'Data/Weights/U_zeros_base_tune_at_100/model/weights_after_tune/weights.01-0.375.ckpt'
+init_training(data_sets, model_checkpoint, model_weights, path = path, tune = True )
+
+image_val_tta = r'Data/Weights/U_zeros_base_tune_at_100/tune_image_val_tta.png'
+image_val = r'Data/Weights/U_zeros_base_tune_at_100/tune_image_val.png'
+image_all = r'Data/Weights/U_zeros_base_tune_at_100/tune_image_all.png'
+eval(model_weights, image_val_tta, image_val, image_all, tune = True)
+
+###########
+
+data_sets = 'Train_U_zeros_LSR_005_03.csv'
+
+model_checkpoint = r'Data/Weights/U_zeros_LSR_005_03_tune_at_100/checkpoints/weights.{epoch:02d}-{loss:.3f}.ckpt'
+model_weights = r'Data/Weights/U_zeros_LSR_005_03_tune_at_100/model/weights/attempt1.ckpt'
+init_training(data_sets, model_checkpoint, model_weights)
+
+model_checkpoint = r'Data/Weights/U_zeros_LSR_005_03_tune_at_100/checkpoint_tune/weights.{epoch:02d}-{val_loss:.3f}.ckpt'
+path = r'Data/Weights/U_zeros_LSR_005_03_tune_at_100/model/weights/attempt1.ckpt'
+model_weights =  r'Data/Weights/U_zeros_LSR_005_03_tune_at_100/model/weights_after_tune/weights.01-0.375.ckpt'
+init_training(data_sets, model_checkpoint, model_weights, path = path, tune = True )
+
+image_val_tta = r'Data/Weights/U_zeros_LSR_005_03_tune_at_100/tune_image_val_tta.png'
+image_val = r'Data/Weights/U_zeros_LSR_005_03_tune_at_100/tune_image_val.png'
+image_all = r'Data/Weights/U_zeros_LSR_005_03_tune_at_100/tune_image_all.png'
+eval(model_weights, image_val_tta, image_val, image_all, tune = True)
+
+############
+
+data_sets = 'Train_U_Ones.csv'
+
+model_checkpoint = r'Data/Weights/U_ones_base_tune_at_100/checkpoints/weights.{epoch:02d}-{loss:.3f}.ckpt'
+model_weights = r'Data/Weights/U_ones_base_tune_at_100/model/weights/attempt1.ckpt'
+init_training(data_sets, model_checkpoint, model_weights)
+
+model_checkpoint = r'Data/Weights/U_ones_base_tune_at_100/checkpoint_tune/weights.{epoch:02d}-{val_loss:.3f}.ckpt'
+path = r'Data/Weights/U_ones_base_tune_at_100/model/weights/attempt1.ckpt'
+model_weights =  r'Data/Weights/U_ones_base_tune_at_100/model/weights_after_tune/weights.01-0.375.ckpt'
+init_training(data_sets, model_checkpoint, model_weights, path = path, tune = True )
+
+image_val_tta = r'Data/Weights/U_ones_base_tune_at_100/tune_image_val_tta.png'
+image_val = r'Data/Weights/U_ones_base_tune_at_100/tune_image_val.png'
+image_all = r'Data/Weights/U_ones_base_tune_at_100/tune_image_all.png'
+eval(model_weights, image_val_tta, image_val, image_all, tune = True)
+
+################
+
+data_sets = 'Train_U_ones_LSR_055_085.csv'
+
+model_checkpoint = r'Data/Weights/U_ones_LSR_tune_at_100/checkpoints/weights.{epoch:02d}-{loss:.3f}.ckpt'
+model_weights = r'Data/Weights/U_ones_LSR_tune_at_100/model/weights/attempt1.ckpt'
+init_training(data_sets, model_checkpoint, model_weights)
+
+model_checkpoint = r'Data/Weights/U_ones_LSR_tune_at_100/checkpoint_tune/weights.{epoch:02d}-{val_loss:.3f}.ckpt'
+path = r'Data/Weights/U_ones_LSR_tune_at_100/model/weights/attempt1.ckpt'
+model_weights =  r'Data/Weights/U_ones_LSR_tune_at_100/model/weights_after_tune/weights.01-0.375.ckpt'
+init_training(data_sets, model_checkpoint, model_weights, path = path, tune = True )
+
+image_val_tta = r'Data/Weights/U_ones_LSR_tune_at_100/tune_image_val_tta.png'
+image_val = r'Data/Weights/U_ones_LSR_tune_at_100/tune_image_val.png'
+image_all = r'Data/Weights/U_ones_LSR_tune_at_100/tune_image_all.png'
+eval(model_weights, image_val_tta, image_val, image_all, tune = True)

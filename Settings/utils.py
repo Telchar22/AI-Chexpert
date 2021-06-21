@@ -9,7 +9,7 @@ def get_roc_curve(labels, predicted_vals, generator,name, roc_5 = True):
         x = [2, 5, 6, 8, 10]
     else:
         x = range(len(labels))
-    for i in x :
+    for k, i in enumerate(x):
         try:
             gt = y[:, i]
 
@@ -23,13 +23,14 @@ def get_roc_curve(labels, predicted_vals, generator,name, roc_5 = True):
             plt.figure(1, figsize=(10, 10))
             plt.plot([0, 1], [0, 1], 'k--')
             plt.plot(fpr_rf, tpr_rf,
-                     label=labels[i] + " (" + str(round(auc_roc, 3)) + ")")
+                     label=labels[k] + " (" + str(round(auc_roc, 3)) + ")")
             plt.xlabel('False positive rate')
             plt.ylabel('True positive rate')
             plt.title('ROC curve')
             plt.legend(loc='best')
         except:
-            print(f"Error: {labels[i]}. ")
+            print(f'Error')
+            #print(f"Error: {labels[i]}. ")
     plt.savefig(name)
     plt.show()
     return auc_roc_vals
