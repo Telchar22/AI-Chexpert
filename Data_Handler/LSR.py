@@ -57,21 +57,6 @@ def create_LSR(data_frame):
     U_zeros.to_csv("Train_U_ones_LSR_005_03.csv", index=None)
 
 
-#create_LSR('patients_data_updated.csv')
-
-def create_Age_LSR():
-    df = pd.read_csv('patients_data_updated.csv')
-    age_reference = pd.read_csv('patients_data.csv')
-    ages_storage = dict()
-
-    for i, k in enumerate(CLASSES):
-        ages_storage[i] = (age_reference['Age'][age_reference[k] < 0].values)/100
-
-    for idx, i in enumerate(CLASSES):
-        df[i][df[i] < 0] = ages_storage[idx]
-    df.to_csv('Age_LSR.csv', index=None)
-create_Age_LSR()
-
 
 
 
